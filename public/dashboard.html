@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>L'Affaire Dashboard</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Inter&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+
+</head>
+
+<body>
+
+<div class="layout">
+
+    <div class="sidebar">
+        <h1>L'AFFAIRE</h1>
+        <p>Private Club</p>
+
+        <!-- 🔥 BOTÓN LOGOUT -->
+        <button class="logout" onclick="logout()">Cerrar sesión</button>
+    </div>
+
+    <div class="main">
+
+        <div class="topbar">
+            <h2>Panel Ejecutivo</h2>
+        </div>
+
+        <!-- KPIs -->
+        <div class="kpis">
+            <div class="kpi">
+                <span>Total</span>
+                <h3 id="totalPersonas">0</h3>
+            </div>
+
+            <div class="kpi">
+                <span>Ingresos</span>
+                <h3 id="totalDinero">$0</h3>
+            </div>
+
+            <div class="kpi">
+                <span>Pendiente</span>
+                <h3 id="pendientes">$0</h3>
+            </div>
+        </div>
+
+        <!-- FORM -->
+        <div class="card">
+            <h3>Nuevo Participante</h3>
+
+            <div class="form">
+                <input id="nombre" placeholder="Nombre">
+                <input id="telefono" placeholder="Teléfono">
+                <input id="edad" placeholder="Edad">
+                <input id="rol" placeholder="Rol">
+                <input id="banco" placeholder="Banco">
+                <input id="pago" placeholder="Pago">
+
+                <button onclick="crear()">Agregar</button>
+            </div>
+        </div>
+
+        <!-- LISTA -->
+        <div class="card">
+            <h3>Participantes</h3>
+            <div id="tabla" class="list"></div>
+        </div>
+
+    </div>
+
+</div>
+
+<script src="app.js"></script>
+
+</body>
+</html>

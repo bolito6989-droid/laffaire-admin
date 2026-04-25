@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>L'Affaire</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@300;400&display=swap" rel="stylesheet">
+
+<style>
+
+/* ===== RESET ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* ===== BODY ===== */
+body {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: radial-gradient(circle at center, #050505, #000);
+    font-family: 'Inter', sans-serif;
+    overflow: hidden;
+}
+
+/* ===== EFECTO LUZ ===== */
+body::before {
+    content: "";
+    position: absolute;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(212,175,55,0.12), transparent 70%);
+    top: 10%;
+    left: 15%;
+    filter: blur(80px);
+    animation: glowMove 8s infinite alternate;
+}
+
+@keyframes glowMove {
+    from { transform: translate(0,0); }
+    to { transform: translate(50px,40px); }
+}
+
+/* ===== CARD ===== */
+.card {
+    width: 380px;
+    padding: 45px;
+    border-radius: 20px;
+    background: rgba(10,10,10,0.95);
+    border: 1px solid rgba(212,175,55,0.2);
+    box-shadow: 0 0 60px rgba(0,0,0,0.9);
+
+    text-align: center;
+    animation: fadeIn 0.8s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===== LOGO ===== */
+.logo img {
+    width: 200px;
+    margin-bottom: 15px;
+    filter: drop-shadow(0 0 10px rgba(212,175,55,0.3));
+}
+
+/* ===== TEXTO ===== */
+.brand {
+    color: #ccc;
+    margin-bottom: 25px;
+    font-style: italic;
+}
+
+/* ===== INPUTS ===== */
+.input-group {
+    position: relative;
+    margin-bottom: 15px;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: #111;
+    color: white;
+    outline: none;
+    transition: 0.3s;
+}
+
+.input-group input:focus {
+    border: 1px solid #d4af37;
+    box-shadow: 0 0 10px rgba(212,175,55,0.2);
+}
+
+/* ===== BOTON ===== */
+button {
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    border: none;
+
+    background: linear-gradient(135deg, #d4af37, #b8962e);
+
+    color: black;
+    font-weight: bold;
+    cursor: pointer;
+
+    transition: 0.3s;
+}
+
+button:hover {
+    transform: scale(1.03);
+    box-shadow: 0 0 20px rgba(212,175,55,0.4);
+}
+
+/* ===== LOADING ===== */
+button.loading {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+/* SPINNER */
+.spinner {
+    border: 3px solid rgba(0,0,0,0.2);
+    border-top: 3px solid black;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    margin: auto;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="card">
+
+    <div class="logo">
+        <img src="/logo.png">
+    </div>
+
+    <div class="brand">
+        Vive el deseo, siente L’Affaire
+    </div>
+
+    <div class="input-group">
+        <input id="user" placeholder="Usuario">
+    </div>
+
+    <div class="input-group">
+        <input id="pass" type="password" placeholder="Contraseña">
+    </div>
+
+    <button id="btn" onclick="login()">Ingresar</button>
+
+</div>
+
+<script>
+
+// ENTER LOGIN
+document.addEventListener("keydown", function(e){
+    if(e.key === "Enter"){
+        login();
+    }
+});
+
+async function login() {
+
+    btn.classList.add("loading");
+    btn.innerHTML = '<div class="spinner"></div>';
+
+    const res = await fetch('/login', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+            username: user.value,
+            password: pass.value
+        })
+    });
+
+    const data = await res.json();
+
+    if (data.token) {
+        localStorage.setItem("token", data.token);
+
+        document.body.style.opacity = "0";
+        setTimeout(() => {
+            window.location = "dashboard.html";
+        }, 400);
+
+    } else {
+        btn.classList.remove("loading");
+        btn.innerHTML = "Ingresar";
+        alert("Credenciales incorrectas");
+    }
+}
+
+</script>
+
+</body>
+</html>
