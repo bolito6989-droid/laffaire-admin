@@ -5,14 +5,15 @@
 <title>L'Affaire Dashboard</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
-
 <link rel="stylesheet" href="styles.css">
+
 </head>
 
 <body>
 
 <div class="layout">
 
+    <!-- SIDEBAR -->
     <aside class="sidebar">
 
         <h2>L’AFFAIRE</h2>
@@ -28,16 +29,19 @@
 
     </aside>
 
+    <!-- MAIN -->
     <main class="main">
 
         <h1>Dashboard</h1>
 
+        <!-- STATS -->
         <div class="stats">
             <div class="card-stat" id="total">Total: 0</div>
             <div class="card-stat" id="ingresos">Ingresos: $0</div>
             <div class="card-stat" id="comisiones">Ganancia: $0</div>
         </div>
 
+        <!-- FORM -->
         <div class="form">
             <input id="nombre" placeholder="Nombre">
             <input id="telefono" placeholder="Teléfono">
@@ -49,12 +53,14 @@
             <button onclick="agregar()">Agregar</button>
         </div>
 
+        <!-- TABLA -->
         <table class="tabla">
             <thead>
                 <tr>
                     <th>Nombre</th>
                     <th>Teléfono</th>
                     <th>Pago</th>
+                    <th>Captador</th>
                     <th>Acciones</th>
                 </tr>
             </thead>

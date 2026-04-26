@@ -16,16 +16,18 @@ const SECRET = process.env.JWT_SECRET || "laffaire_secret";
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
 
-    const { data } = await supabase
+    const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('username', username)
         .eq('password', password)
         .single();
 
-    if (!data) return res.status(401).json({ error: "Error login" });
+    if (error || !data) {
+        return res.status(401).json({ error: "Credenciales incorrectas" });
+    }
 
-    const token = jwt.sign({ username: data.username }, SECRET);
+    const token = jwt.sign({ username: data.username }, SECRET, { expiresIn: '8h' });
     res.json({ token, username: data.username });
 });
 
@@ -46,12 +48,16 @@ app.get('/participantes', auth, async (req, res) => {
 
     let query = supabase.from('participantes').select('*');
 
+    // Solo admin ve todo
     if (req.user.username !== "admin") {
         query = query.eq('usuario', req.user.username);
     }
 
-    const { data } = await query;
-    res.json(data);
+    const { data, error } = await query;
+
+    if (error) return res.status(500).json({ error });
+
+    res.json(data || []);
 });
 
 // ================= CREAR PARTICIPANTE =================
@@ -59,28 +65,39 @@ app.post('/participantes', auth, async (req, res) => {
 
     const { nombre, telefono, edad, rol, banco, pago } = req.body;
 
-    const pagoNum = Number(pago) || 0;
+    if (!nombre) {
+        return res.status(400).json({ error: "Nombre requerido" });
+    }
 
-    await supabase.from('participantes').insert([{
+    const { error } = await supabase.from('participantes').insert([{
         nombre,
         telefono,
         edad,
         rol,
         banco,
-        pago: pagoNum,
-        usuario: req.user.username
+        pago: Number(pago) || 0,
+        usuario: req.user.username // 🔥 CAPTADOR
     }]);
+
+    if (error) return res.status(500).json({ error });
 
     res.json({ ok: true });
 });
 
 // ================= ELIMINAR =================
 app.delete('/participantes/:id', auth, async (req, res) => {
-    await supabase.from('participantes').delete().eq('id', req.params.id);
+
+    const { error } = await supabase
+        .from('participantes')
+        .delete()
+        .eq('id', req.params.id);
+
+    if (error) return res.status(500).json({ error });
+
     res.json({ ok: true });
 });
 
-// ================= DASHBOARD (CAPTADORES) =================
+// ================= DASHBOARD =================
 app.get('/dashboard', auth, async (req, res) => {
 
     let query = supabase.from('participantes').select('*');
@@ -89,18 +106,19 @@ app.get('/dashboard', auth, async (req, res) => {
         query = query.eq('usuario', req.user.username);
     }
 
-    const { data } = await query;
+    const { data, error } = await query;
+
+    if (error) return res.status(500).json({ error });
 
     let total = data.length;
     let ingresos = 0;
     let comisiones = 0;
 
     data.forEach(p => {
-
-        const pago = p.pago || 0;
-
+        const pago = Number(p.pago) || 0;
         ingresos += pago;
 
+        // comisión por venta válida (cover >= 25)
         if (pago >= 25) {
             comisiones += 7;
         }
@@ -114,4 +132,4 @@ app.get('/dashboard', auth, async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("Servidor listo " + PORT));
+app.listen(PORT, () => console.log("Servidor listo en puerto " + PORT));
