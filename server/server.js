@@ -8,12 +8,20 @@ const path = require('path');
 const app = express();
 app.use(express.json());
 
-// ================= RUTA PUBLIC =================
-app.use(express.static(path.join(__dirname, '../public')));
+// ================= PATH ABSOLUTO SEGURO =================
+const publicPath = path.join(__dirname, '..', 'public');
 
-// 👉 SOLUCIÓN "Cannot GET /"
+// ================= STATIC =================
+app.use(express.static(publicPath));
+
+// ================= RUTA ROOT (FORZADA) =================
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/login.html'));
+    res.sendFile(path.join(publicPath, 'login.html'));
+});
+
+// ================= TEST (DEBUG) =================
+app.get('/test', (req, res) => {
+    res.send("Servidor OK");
 });
 
 // ================= DB =================
@@ -44,7 +52,6 @@ db.serialize(() => {
         )
     `);
 
-    // usuarios base
     db.get("SELECT * FROM users WHERE username='admin'", (err, row) => {
         if (!row) {
             db.run(`
@@ -59,7 +66,6 @@ db.serialize(() => {
 
 });
 
-// ================= JWT =================
 const SECRET = process.env.JWT_SECRET || "laffaire_secret";
 
 // ================= LOGIN =================
@@ -73,16 +79,8 @@ app.post('/login', (req, res) => {
         (err, user) => {
 
             if (user) {
-                const token = jwt.sign(
-                    { username: user.username },
-                    SECRET
-                );
-
-                res.json({
-                    token,
-                    username: user.username
-                });
-
+                const token = jwt.sign({ username: user.username }, SECRET);
+                res.json({ token, username: user.username });
             } else {
                 res.status(401).json({ error: "Credenciales incorrectas" });
             }
@@ -92,37 +90,26 @@ app.post('/login', (req, res) => {
 
 // ================= AUTH =================
 function auth(req, res, next) {
-
     const token = req.headers.authorization;
-
     if (!token) return res.sendStatus(403);
 
     jwt.verify(token, SECRET, (err, data) => {
-
         if (err) return res.sendStatus(403);
-
         req.user = data;
         next();
     });
 }
 
-// ================= GET PARTICIPANTES =================
+// ================= PARTICIPANTES =================
 app.get('/participantes', auth, (req, res) => {
 
     if (req.user.username === "admin") {
-
-        db.all("SELECT * FROM participantes", [], (e, rows) => {
-            res.json(rows);
-        });
-
+        db.all("SELECT * FROM participantes", [], (e, rows) => res.json(rows));
     } else {
-
         db.all(
             "SELECT * FROM participantes WHERE usuario=?",
             [req.user.username],
-            (e, rows) => {
-                res.json(rows);
-            }
+            (e, rows) => res.json(rows)
         );
     }
 });
@@ -143,88 +130,13 @@ app.post('/participantes', auth, (req, res) => {
         (nombre, telefono, edad, rol, banco, pago, abono, pendiente, usuario)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
-    [
-        nombre,
-        telefono,
-        edad,
-        rol,
-        banco,
-        pagoCompleto,
-        abono,
-        pendiente,
-        req.user.username
-    ],
+    [nombre, telefono, edad, rol, banco, pagoCompleto, abono, pendiente, req.user.username],
     () => res.json({ ok: true }));
-
-});
-
-// ================= EDITAR =================
-app.put('/participantes/:id', auth, (req, res) => {
-
-    const { nombre, telefono, edad, rol, banco, pago } = req.body;
-
-    const pagoNum = Number(pago) || 0;
-
-    const abono = pagoNum < 35 ? pagoNum : 0;
-    const pagoCompleto = pagoNum >= 35 ? 35 : 0;
-    const pendiente = Math.max(35 - pagoNum, 0);
-
-    db.run(`
-        UPDATE participantes
-        SET nombre=?, telefono=?, edad=?, rol=?, banco=?, pago=?, abono=?, pendiente=?
-        WHERE id=?
-    `,
-    [
-        nombre,
-        telefono,
-        edad,
-        rol,
-        banco,
-        pagoCompleto,
-        abono,
-        pendiente,
-        req.params.id
-    ],
-    () => res.json({ ok: true }));
-
-});
-
-// ================= ELIMINAR =================
-app.delete('/participantes/:id', auth, (req, res) => {
-
-    db.run(
-        "DELETE FROM participantes WHERE id=?",
-        [req.params.id],
-        () => res.json({ ok: true })
-    );
-});
-
-// ================= DASHBOARD =================
-app.get('/dashboard', auth, (req, res) => {
-
-    let query = `
-        SELECT 
-            COUNT(*) as total,
-            SUM(pago + abono) as ingresos,
-            SUM(pendiente) as pendiente
-        FROM participantes
-    `;
-
-    let params = [];
-
-    if (req.user.username !== "admin") {
-        query += " WHERE usuario=?";
-        params.push(req.user.username);
-    }
-
-    db.get(query, params, (e, row) => {
-        res.json(row || { total: 0, ingresos: 0, pendiente: 0 });
-    });
 });
 
 // ================= START =================
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-    console.log("🔥 L'Affaire corriendo en puerto " + PORT);
+    console.log("🔥 Servidor corriendo en puerto " + PORT);
 });
