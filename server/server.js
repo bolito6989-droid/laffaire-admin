@@ -8,20 +8,15 @@ const path = require('path');
 const app = express();
 app.use(express.json());
 
-// ================= PATH ABSOLUTO SEGURO =================
+// ================= PATH PUBLIC =================
 const publicPath = path.join(__dirname, '..', 'public');
 
 // ================= STATIC =================
 app.use(express.static(publicPath));
 
-// ================= RUTA ROOT (FORZADA) =================
+// ================= ROOT =================
 app.get('/', (req, res) => {
     res.sendFile(path.join(publicPath, 'login.html'));
-});
-
-// ================= TEST (DEBUG) =================
-app.get('/test', (req, res) => {
-    res.send("Servidor OK");
 });
 
 // ================= DB =================
@@ -52,6 +47,7 @@ db.serialize(() => {
         )
     `);
 
+    // usuarios base
     db.get("SELECT * FROM users WHERE username='admin'", (err, row) => {
         if (!row) {
             db.run(`
@@ -90,26 +86,39 @@ app.post('/login', (req, res) => {
 
 // ================= AUTH =================
 function auth(req, res, next) {
+
     const token = req.headers.authorization;
+
     if (!token) return res.sendStatus(403);
 
     jwt.verify(token, SECRET, (err, data) => {
+
         if (err) return res.sendStatus(403);
+
         req.user = data;
         next();
     });
 }
 
-// ================= PARTICIPANTES =================
+// ================= GET PARTICIPANTES =================
 app.get('/participantes', auth, (req, res) => {
 
     if (req.user.username === "admin") {
-        db.all("SELECT * FROM participantes", [], (e, rows) => res.json(rows));
+
+        // 🔥 ADMIN VE TODO
+        db.all("SELECT * FROM participantes", [], (e, rows) => {
+            res.json(rows);
+        });
+
     } else {
+
+        // 🔒 CAPTADOR SOLO VE LO SUYO
         db.all(
             "SELECT * FROM participantes WHERE usuario=?",
             [req.user.username],
-            (e, rows) => res.json(rows)
+            (e, rows) => {
+                res.json(rows);
+            }
         );
     }
 });
@@ -125,13 +134,59 @@ app.post('/participantes', auth, (req, res) => {
     const pagoCompleto = pagoNum >= 35 ? 35 : 0;
     const pendiente = Math.max(35 - pagoNum, 0);
 
+    const usuario = req.user.username || "desconocido";
+
     db.run(`
         INSERT INTO participantes
         (nombre, telefono, edad, rol, banco, pago, abono, pendiente, usuario)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
-    [nombre, telefono, edad, rol, banco, pagoCompleto, abono, pendiente, req.user.username],
+    [
+        nombre,
+        telefono,
+        edad,
+        rol,
+        banco,
+        pagoCompleto,
+        abono,
+        pendiente,
+        usuario
+    ],
     () => res.json({ ok: true }));
+
+});
+
+// ================= DELETE =================
+app.delete('/participantes/:id', auth, (req, res) => {
+
+    db.run(
+        "DELETE FROM participantes WHERE id=?",
+        [req.params.id],
+        () => res.json({ ok: true })
+    );
+});
+
+// ================= DASHBOARD =================
+app.get('/dashboard', auth, (req, res) => {
+
+    let query = `
+        SELECT 
+            COUNT(*) as total,
+            SUM(pago + abono) as ingresos,
+            SUM(pendiente) as pendiente
+        FROM participantes
+    `;
+
+    let params = [];
+
+    if (req.user.username !== "admin") {
+        query += " WHERE usuario=?";
+        params.push(req.user.username);
+    }
+
+    db.get(query, params, (e, row) => {
+        res.json(row || { total: 0, ingresos: 0, pendiente: 0 });
+    });
 });
 
 // ================= START =================
