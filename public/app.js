@@ -1,111 +1,117 @@
-const token = localStorage.getItem("token");
-const username = localStorage.getItem("username");
+const userName = localStorage.getItem("user") || "admin";
+document.getElementById("usuario").innerText = userName;
 
-if (!token) window.location = "login.html";
+// AVATAR DINÁMICO
+const avatars = {
+    admin: "img/admin.jpg",
+    abel: "img/abel.jpg",
+    daniel: "img/daniel.jpg",
+    emmanuel: "img/emmanuel.jpg"
+};
 
-// ================= MOSTRAR USER =================
-if(username !== "admin"){
-    document.querySelector(".topbar h2").innerText += " - " + username.toUpperCase();
+document.getElementById("avatarImg").src =
+    avatars[userName.toLowerCase()] || "img/default.jpg";
+
+// ENTER
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") agregar();
+});
+
+// AGREGAR
+async function agregar() {
+
+    const data = {
+        nombre: nombre.value,
+        telefono: telefono.value,
+        edad: edad.value,
+        rol: rol.value,
+        banco: banco.value,
+        pago: parseFloat(pago.value) || 0
+    };
+
+    if (!data.nombre) return alert("Ingrese nombre");
+
+    await fetch('/participantes', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': localStorage.getItem("token")
+        },
+        body: JSON.stringify(data)
+    });
+
+    limpiar();
+    cargar();
 }
 
-// ================= ESTADO =================
-function estado(p){
-    if(p.pendiente == 0) return ["PAGADO","paid"];
-    if(p.abono > 0) return ["ABONO","partial"];
-    return ["PENDIENTE","pending"];
+// LIMPIAR
+function limpiar() {
+    nombre.value = "";
+    telefono.value = "";
+    edad.value = "";
+    rol.value = "";
+    banco.value = "";
+    pago.value = "";
 }
 
-// ================= KPIs =================
-async function cargarKPIs(){
-    const res = await fetch('/dashboard',{
-        headers:{Authorization:token}
+// CARGAR
+async function cargar() {
+
+    const res = await fetch('/participantes', {
+        headers: { 'Authorization': localStorage.getItem("token") }
     });
 
     const data = await res.json();
 
-    totalPersonas.innerText = data.total || 0;
-    totalDinero.innerText = "$"+(data.ingresos||0);
-    pendientes.innerText = "$"+(data.pendiente||0);
-}
+    const lista = document.getElementById("lista");
+    lista.innerHTML = "";
 
-// ================= LISTA =================
-async function cargar(){
+    data.forEach(p => {
 
-    const res = await fetch('/participantes',{
-        headers:{Authorization:token}
-    });
-
-    const data = await res.json();
-
-    tabla.innerHTML="";
-
-    data.forEach((p,i)=>{
-
-        const total = (p.pago||0)+(p.abono||0);
-        const [txt,cl] = estado(p);
-
-        tabla.innerHTML+=`
-        <div class="list-item">
-            <div>
-                <b>${i+1}. ${p.nombre}</b><br>
-                <small>${p.usuario}</small>
-            </div>
-
-            <div>$${total}</div>
-            <div class="${cl}">${txt}</div>
-
-            <div class="acciones">
-                <button onclick="eliminar(${p.id})">🗑</button>
-            </div>
-        </div>
+        lista.innerHTML += `
+        <tr>
+            <td>${p.nombre}</td>
+            <td>${p.telefono || ""}</td>
+            <td>$${p.pago || 0}</td>
+            <td>
+                <button class="btn-delete" onclick="eliminar(${p.id})">Eliminar</button>
+            </td>
+        </tr>
         `;
     });
+
+    dashboard();
 }
 
-// ================= CREAR =================
-async function crear(){
+// DASHBOARD
+async function dashboard() {
 
-    await fetch('/participantes',{
-        method:'POST',
-        headers:{
-            'Content-Type':'application/json',
-            Authorization:token
-        },
-        body: JSON.stringify({
-            nombre:nombre.value,
-            telefono:telefono.value,
-            edad:edad.value,
-            rol:rol.value,
-            banco:banco.value,
-            pago:pago.value
-        })
+    const res = await fetch('/dashboard', {
+        headers: { 'Authorization': localStorage.getItem("token") }
     });
 
-    document.querySelectorAll("input").forEach(i=>i.value="");
+    const d = await res.json();
 
-    cargar();
-    cargarKPIs();
+    document.getElementById("total").innerText = "Total: " + d.total;
+    document.getElementById("ingresos").innerText = "Ingresos: $" + d.ingresos;
+    document.getElementById("comisiones").innerText = "Ganancia: $" + d.comisiones;
 }
 
-// ================= ELIMINAR =================
-async function eliminar(id){
-
-    if(!confirm("Eliminar?")) return;
-
-    await fetch('/participantes/'+id,{
-        method:'DELETE',
-        headers:{Authorization:token}
+// ELIMINAR
+async function eliminar(id) {
+    await fetch('/participantes/' + id, {
+        method: 'DELETE',
+        headers: { 'Authorization': localStorage.getItem("token") }
     });
-
     cargar();
-    cargarKPIs();
 }
 
-cargar();
-cargarKPIs();
-// ================= LOGOUT =================
-function logout(){
-    localStorage.removeItem("token");
-    localStorage.removeItem("username");
+// LOGOUT
+function logout() {
+    localStorage.clear();
     window.location = "login.html";
 }
+
+// INIT
+cargar();
+setInterval(cargar, 4000);

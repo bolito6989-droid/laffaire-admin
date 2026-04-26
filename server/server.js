@@ -1,197 +1,117 @@
 require('dotenv').config();
 
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
 const jwt = require('jsonwebtoken');
 const path = require('path');
+const supabase = require('./supabase');
 
 const app = express();
+
 app.use(express.json());
-
-// ================= PATH PUBLIC =================
-const publicPath = path.join(__dirname, '..', 'public');
-
-// ================= STATIC =================
-app.use(express.static(publicPath));
-
-// ================= ROOT =================
-app.get('/', (req, res) => {
-    res.sendFile(path.join(publicPath, 'login.html'));
-});
-
-// ================= DB =================
-const db = new sqlite3.Database('./server/database.db');
-
-db.serialize(() => {
-
-    db.run(`
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT,
-            password TEXT
-        )
-    `);
-
-    db.run(`
-        CREATE TABLE IF NOT EXISTS participantes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombre TEXT,
-            telefono TEXT,
-            edad INTEGER,
-            rol TEXT,
-            banco TEXT,
-            pago REAL,
-            abono REAL,
-            pendiente REAL,
-            usuario TEXT
-        )
-    `);
-
-    // usuarios base
-    db.get("SELECT * FROM users WHERE username='admin'", (err, row) => {
-        if (!row) {
-            db.run(`
-                INSERT INTO users (username, password) VALUES 
-                ('admin','1234'),
-                ('abel','1234'),
-                ('daniel','1234'),
-                ('emmanuel','1234')
-            `);
-        }
-    });
-
-});
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
 const SECRET = process.env.JWT_SECRET || "laffaire_secret";
 
 // ================= LOGIN =================
-app.post('/login', (req, res) => {
-
+app.post('/login', async (req, res) => {
     const { username, password } = req.body;
 
-    db.get(
-        "SELECT * FROM users WHERE username=? AND password=?",
-        [username, password],
-        (err, user) => {
+    const { data } = await supabase
+        .from('users')
+        .select('*')
+        .eq('username', username)
+        .eq('password', password)
+        .single();
 
-            if (user) {
-                const token = jwt.sign({ username: user.username }, SECRET);
-                res.json({ token, username: user.username });
-            } else {
-                res.status(401).json({ error: "Credenciales incorrectas" });
-            }
-        }
-    );
+    if (!data) return res.status(401).json({ error: "Error login" });
+
+    const token = jwt.sign({ username: data.username }, SECRET);
+    res.json({ token, username: data.username });
 });
 
 // ================= AUTH =================
 function auth(req, res, next) {
-
     const token = req.headers.authorization;
-
     if (!token) return res.sendStatus(403);
 
-    jwt.verify(token, SECRET, (err, data) => {
-
+    jwt.verify(token, SECRET, (err, user) => {
         if (err) return res.sendStatus(403);
-
-        req.user = data;
+        req.user = user;
         next();
     });
 }
 
 // ================= GET PARTICIPANTES =================
-app.get('/participantes', auth, (req, res) => {
+app.get('/participantes', auth, async (req, res) => {
 
-    if (req.user.username === "admin") {
+    let query = supabase.from('participantes').select('*');
 
-        // 🔥 ADMIN VE TODO
-        db.all("SELECT * FROM participantes", [], (e, rows) => {
-            res.json(rows);
-        });
-
-    } else {
-
-        // 🔒 CAPTADOR SOLO VE LO SUYO
-        db.all(
-            "SELECT * FROM participantes WHERE usuario=?",
-            [req.user.username],
-            (e, rows) => {
-                res.json(rows);
-            }
-        );
+    if (req.user.username !== "admin") {
+        query = query.eq('usuario', req.user.username);
     }
+
+    const { data } = await query;
+    res.json(data);
 });
 
-// ================= CREAR =================
-app.post('/participantes', auth, (req, res) => {
+// ================= CREAR PARTICIPANTE =================
+app.post('/participantes', auth, async (req, res) => {
 
     const { nombre, telefono, edad, rol, banco, pago } = req.body;
 
     const pagoNum = Number(pago) || 0;
 
-    const abono = pagoNum < 35 ? pagoNum : 0;
-    const pagoCompleto = pagoNum >= 35 ? 35 : 0;
-    const pendiente = Math.max(35 - pagoNum, 0);
-
-    const usuario = req.user.username || "desconocido";
-
-    db.run(`
-        INSERT INTO participantes
-        (nombre, telefono, edad, rol, banco, pago, abono, pendiente, usuario)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `,
-    [
+    await supabase.from('participantes').insert([{
         nombre,
         telefono,
         edad,
         rol,
         banco,
-        pagoCompleto,
-        abono,
-        pendiente,
-        usuario
-    ],
-    () => res.json({ ok: true }));
+        pago: pagoNum,
+        usuario: req.user.username
+    }]);
 
+    res.json({ ok: true });
 });
 
-// ================= DELETE =================
-app.delete('/participantes/:id', auth, (req, res) => {
-
-    db.run(
-        "DELETE FROM participantes WHERE id=?",
-        [req.params.id],
-        () => res.json({ ok: true })
-    );
+// ================= ELIMINAR =================
+app.delete('/participantes/:id', auth, async (req, res) => {
+    await supabase.from('participantes').delete().eq('id', req.params.id);
+    res.json({ ok: true });
 });
 
-// ================= DASHBOARD =================
-app.get('/dashboard', auth, (req, res) => {
+// ================= DASHBOARD (CAPTADORES) =================
+app.get('/dashboard', auth, async (req, res) => {
 
-    let query = `
-        SELECT 
-            COUNT(*) as total,
-            SUM(pago + abono) as ingresos,
-            SUM(pendiente) as pendiente
-        FROM participantes
-    `;
-
-    let params = [];
+    let query = supabase.from('participantes').select('*');
 
     if (req.user.username !== "admin") {
-        query += " WHERE usuario=?";
-        params.push(req.user.username);
+        query = query.eq('usuario', req.user.username);
     }
 
-    db.get(query, params, (e, row) => {
-        res.json(row || { total: 0, ingresos: 0, pendiente: 0 });
+    const { data } = await query;
+
+    let total = data.length;
+    let ingresos = 0;
+    let comisiones = 0;
+
+    data.forEach(p => {
+
+        const pago = p.pago || 0;
+
+        ingresos += pago;
+
+        if (pago >= 25) {
+            comisiones += 7;
+        }
+    });
+
+    res.json({
+        total,
+        ingresos,
+        comisiones
     });
 });
 
-// ================= START =================
 const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-    console.log("🔥 Servidor corriendo en puerto " + PORT);
-});
+app.listen(PORT, () => console.log("Servidor listo " + PORT));
