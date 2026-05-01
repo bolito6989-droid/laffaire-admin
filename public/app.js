@@ -137,3 +137,10 @@ function logout() {
 
 // INIT
 cargar();
+
+const avatars = {
+    admin: "img/admin.jpg",
+    abel: "img/abel.jpg",
+    daniel: "img/daniel.jpg",
+    emmanuel: "img/emmanuel.jpg"
+};
