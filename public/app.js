@@ -1,26 +1,54 @@
+// ================= VARIABLES =================
 const token = localStorage.getItem("token");
 const userName = localStorage.getItem("user") || "admin";
 
-document.getElementById("usuario").innerText = userName;
+const usuarioEl = document.getElementById("usuario");
+const lista = document.getElementById("lista");
+
+const nombre = document.getElementById("nombre");
+const telefono = document.getElementById("telefono");
+const edad = document.getElementById("edad");
+const rol = document.getElementById("rol");
+const banco = document.getElementById("banco");
+const pago = document.getElementById("pago");
+
+const total = document.getElementById("total");
+const ingresos = document.getElementById("ingresos");
+const comisiones = document.getElementById("comisiones");
+
+usuarioEl.innerText = userName;
 
 let editandoId = null;
+
+// ================= AVATAR =================
+const avatars = {
+    admin: "img/admin.jpg",
+    abel: "img/abel.jpg",
+    daniel: "img/daniel.jpg",
+    emmanuel: "img/emmanuel.jpg"
+};
+
+const avatarImg = document.getElementById("avatarImg");
+if (avatarImg) {
+    avatarImg.src = avatars[userName.toLowerCase()] || "img/default.jpg";
+}
 
 // ================= AGREGAR / EDITAR =================
 async function agregar() {
 
     const data = {
-        nombre: nombre.value,
-        telefono: telefono.value,
-        edad: edad.value,
-        rol: rol.value,
-        banco: banco.value,
+        nombre: nombre.value.trim(),
+        telefono: telefono.value.trim(),
+        edad: edad.value.trim(),
+        rol: rol.value.trim(),
+        banco: banco.value.trim(),
         pago: parseFloat(pago.value) || 0
     };
 
     if (!data.nombre) return alert("Ingrese nombre");
 
     if (editandoId) {
-        // EDITAR
+
         await fetch('/participantes/' + editandoId, {
             method: 'PUT',
             headers: {
@@ -33,7 +61,7 @@ async function agregar() {
         editandoId = null;
 
     } else {
-        // CREAR
+
         await fetch('/participantes', {
             method: 'POST',
             headers: {
@@ -49,16 +77,16 @@ async function agregar() {
 }
 
 // ================= EDITAR =================
-function editar(p) {
+function editar(id, p) {
 
-    nombre.value = p.nombre;
-    telefono.value = p.telefono;
-    edad.value = p.edad;
-    rol.value = p.rol;
-    banco.value = p.banco;
-    pago.value = p.pago;
+    nombre.value = p.nombre || "";
+    telefono.value = p.telefono || "";
+    edad.value = p.edad || "";
+    rol.value = p.rol || "";
+    banco.value = p.banco || "";
+    pago.value = p.pago || 0;
 
-    editandoId = p.id;
+    editandoId = id;
 }
 
 // ================= CARGAR =================
@@ -77,13 +105,17 @@ async function cargar() {
         lista.innerHTML += `
         <tr>
             <td>${p.nombre}</td>
-            <td>${p.telefono}</td>
-            <td>$${p.pago}</td>
-            <td style="color:#d4af37;">${p.usuario}</td>
+            <td>${p.telefono || ""}</td>
+            <td>$${p.pago || 0}</td>
+            <td style="color:#d4af37;font-weight:600;">
+                ${p.usuario || "-"}
+            </td>
             <td>
-                <button onclick='editar(${JSON.stringify(p)})' style="background:#3b82f6;color:white;border:none;padding:6px 10px;margin-right:5px;">
+                <button onclick='editar(${p.id}, ${JSON.stringify(p)})'
+                    style="background:#3b82f6;color:white;border:none;padding:6px 10px;margin-right:5px;border-radius:6px;">
                     Editar
                 </button>
+
                 <button onclick="eliminar(${p.id})" class="btn-delete">
                     Eliminar
                 </button>
@@ -104,13 +136,16 @@ async function dashboard() {
 
     const d = await res.json();
 
-    total.innerText = "Total: " + d.total;
-    ingresos.innerText = "Ingresos: $" + d.ingresos;
-    comisiones.innerText = "Ganancia: $" + d.comisiones;
+    total.innerText = "Total: " + (d.total || 0);
+    ingresos.innerText = "Ingresos: $" + (d.ingresos || 0);
+    comisiones.innerText = "Ganancia: $" + (d.comisiones || 0);
 }
 
 // ================= ELIMINAR =================
 async function eliminar(id) {
+
+    if (!confirm("¿Eliminar participante?")) return;
+
     await fetch('/participantes/' + id, {
         method: 'DELETE',
         headers: { 'Authorization': token }
@@ -135,12 +170,5 @@ function logout() {
     window.location = "login.html";
 }
 
-// INIT
+// ================= INIT =================
 cargar();
-
-const avatars = {
-    admin: "img/admin.jpg",
-    abel: "img/abel.jpg",
-    daniel: "img/daniel.jpg",
-    emmanuel: "img/emmanuel.jpg"
-};
