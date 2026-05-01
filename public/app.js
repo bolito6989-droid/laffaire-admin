@@ -21,16 +21,22 @@ usuarioEl.innerText = userName;
 let editandoId = null;
 
 // ================= AVATAR =================
+// ================= AVATAR =================
+const avatarImg = document.getElementById("avatarImg");
+
 const avatars = {
-    admin: "img/admin.jpg",
-    abel: "img/abel.jpg",
-    daniel: "img/daniel.jpg",
-    emmanuel: "img/emmanuel.jpg"
+    admin: "/img/admin.jpg",
+    abel: "/img/abel.jpg",
+    daniel: "/img/daniel.jpg",
+    emmanuel: "/img/emmanuel.jpg"
 };
 
-const avatarImg = document.getElementById("avatarImg");
 if (avatarImg) {
-    avatarImg.src = avatars[userName.toLowerCase()] || "img/default.jpg";
+    const key = userName.trim().toLowerCase();
+
+    console.log("USER:", key); // DEBUG
+
+    avatarImg.src = avatars[key] || "/img/default.jpg";
 }
 
 // ================= AGREGAR / EDITAR =================
