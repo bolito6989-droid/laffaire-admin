@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<title>L'Affaire Dashboard</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>L'Affaire Executive</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 
 <link rel="stylesheet" href="styles.css">
 
@@ -12,23 +15,83 @@
 
 <body>
 
+<div class="bg-blur blur-1"></div>
+<div class="bg-blur blur-2"></div>
+
 <div class="layout">
 
     <!-- SIDEBAR -->
     <aside class="sidebar">
 
-        <h2>L’AFFAIRE</h2>
+        <div>
 
-        <div class="user-box">
-            <img id="avatarImg" class="avatar-img" src="/img/default.jpg">
+            <!-- LOGO -->
+            <div class="logo-area">
 
-            <div class="user-info">
-                <p id="usuario"></p>
+                <div class="brand">
+                    L’AFFAIRE
+                </div>
+
+                <div class="premium-badge">
+                    EXECUTIVE PANEL
+                </div>
+
             </div>
+
+            <!-- USER -->
+            <div class="user-card">
+
+                <img
+                    id="avatarImg"
+                    class="avatar-img"
+                    src="/img/default.jpg"
+                >
+
+                <div>
+
+                    <div class="welcome">
+                        Bienvenido
+                    </div>
+
+                    <div
+                        id="usuario"
+                        class="username">
+
+                        admin
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- MENU -->
+            <div class="menu">
+
+                <button class="menu-btn active">
+                    Dashboard
+                </button>
+
+                <!-- SOLO UNA OPCION -->
+                <button
+                    class="menu-btn"
+                    onclick="toggleHistorial()">
+
+                    Historial Eventos
+
+                </button>
+
+            </div>
+
         </div>
 
-        <button class="logout" onclick="logout()">
+        <!-- LOGOUT -->
+        <button
+            class="logout"
+            onclick="logout()">
+
             Cerrar sesión
+
         </button>
 
     </aside>
@@ -36,82 +99,187 @@
     <!-- MAIN -->
     <main class="main">
 
-        <h1>Evento 04 de Mayo</h1>
+        <!-- TOPBAR -->
+        <div class="topbar">
+
+            <div>
+
+                <h1>
+                    Dashboard Ejecutivo
+                </h1>
+
+                <p>
+                    Sistema premium de administración
+                </p>
+
+            </div>
+
+            <div class="event-pill">
+
+                Evento 04 de Mayo
+
+            </div>
+
+        </div>
 
         <!-- STATS -->
         <div class="stats">
 
-            <div class="card-stat" id="total">
-                Total: 0
+            <div class="stat-card glass">
+
+                <div class="stat-label">
+                    Participantes
+                </div>
+
+                <div
+                    class="stat-value"
+                    id="total">
+
+                    0
+
+                </div>
+
             </div>
 
-            <div class="card-stat" id="ingresos">
-                Ingresos: $0
+            <div class="stat-card glass">
+
+                <div class="stat-label">
+                    Ingresos
+                </div>
+
+                <div
+                    class="stat-value"
+                    id="ingresos">
+
+                    $0
+
+                </div>
+
             </div>
 
-            <div class="card-stat" id="comisiones">
-                Ganancia: $0
+            <div class="stat-card glass">
+
+                <div class="stat-label">
+                    Ganancias
+                </div>
+
+                <div
+                    class="stat-value"
+                    id="comisiones">
+
+                    $0
+
+                </div>
+
             </div>
 
-            <!-- SOLO ADMIN -->
-            <div class="card-stat admin-only" id="quitoCard">
-                Quito: 0
+            <div
+                class="stat-card glass admin-only"
+                id="quitoCard">
+
+                <div class="stat-label">
+                    Quito
+                </div>
+
+                <div class="stat-value">
+                    0
+                </div>
+
             </div>
 
-            <div class="card-stat admin-only" id="guayaquilCard">
-                Guayaquil: 0
+            <div
+                class="stat-card glass admin-only"
+                id="guayaquilCard">
+
+                <div class="stat-label">
+                    Guayaquil
+                </div>
+
+                <div class="stat-value">
+                    0
+                </div>
+
             </div>
-
-        </div>
-
-        <!-- ADMIN -->
-        <div id="adminActions" class="admin-actions" style="display:none;">
-
-            <button onclick="archivarEvento()">
-                Archivar Evento 04 de Mayo
-            </button>
 
         </div>
 
         <!-- FORM -->
-        <div class="form">
+        <div class="premium-card glass">
 
-            <input id="nombre" placeholder="Nombre">
+            <div class="section-title">
+                Nuevo Participante
+            </div>
 
-            <input id="telefono" placeholder="Teléfono">
+            <div class="form-grid">
 
-            <input id="edad" placeholder="Edad">
+                <input id="nombre" placeholder="Nombre completo">
 
-            <input id="rol" placeholder="Rol">
+                <input id="telefono" placeholder="Teléfono">
 
-            <input id="banco" placeholder="Banco">
+                <input id="edad" placeholder="Edad">
 
-            <input id="pago" placeholder="Pago">
+                <input id="rol" placeholder="Rol">
 
-            <button onclick="agregar()">
+                <input id="banco" placeholder="Banco">
+
+                <input id="pago" placeholder="Pago">
+
+            </div>
+
+            <button
+                class="save-btn"
+                onclick="agregar()">
+
                 Guardar Participante
+
             </button>
 
         </div>
 
         <!-- TABLA -->
-        <table class="tabla">
+        <div class="premium-card glass">
 
-            <thead>
+            <div class="table-header">
 
-                <tr>
-                    <th>Nombre</th>
-                    <th>Pago</th>
-                    <th>Ciudad</th>
-                    <th>Captador</th>
-                    <th>Acciones</th>
-                </tr>
+                <div class="section-title">
+                    Participantes
+                </div>
 
-            </thead>
+                <button
+                    class="archive-btn"
+                    onclick="archivarEvento()">
 
-            <tbody id="lista"></tbody>
+                    Archivar Evento
 
-        </table>
+                </button>
+
+            </div>
+
+            <div class="table-container">
+
+                <table class="tabla">
+
+                    <thead>
+
+                    <tr>
+
+                        <th>Nombre</th>
+                        <th>Pago</th>
+                        <th>Ciudad</th>
+                        <th>Captador</th>
+                        <th>Acciones</th>
+
+                    </tr>
+
+                    </thead>
+
+                    <tbody id="lista"></tbody>
+
+                </table>
+
+            </div>
+
+        </div>
 
     </main>
 
