@@ -9,6 +9,7 @@ const app = express();
 
 app.use(express.json());
 
+// ================= PUBLIC =================
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // ================= HOME =================
@@ -21,31 +22,42 @@ const SECRET = process.env.JWT_SECRET || "laffaire_secret";
 // ================= LOGIN =================
 app.post('/login', async (req, res) => {
 
-    const { username, password } = req.body;
+    try {
 
-    const { data } = await supabase
-        .from('users')
-        .select('*')
-        .eq('username', username)
-        .eq('password', password)
-        .single();
+        const { username, password } = req.body;
 
-    if (!data) {
-        return res.status(401).json({
-            error: "Credenciales incorrectas"
+        const { data, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('username', username)
+            .eq('password', password)
+            .single();
+
+        if (error || !data) {
+            return res.status(401).json({
+                error: "Credenciales incorrectas"
+            });
+        }
+
+        const token = jwt.sign(
+            { username: data.username },
+            SECRET,
+            { expiresIn: '8h' }
+        );
+
+        res.json({
+            token,
+            username: data.username
+        });
+
+    } catch (err) {
+
+        console.log(err);
+
+        res.status(500).json({
+            error: 'Error servidor'
         });
     }
-
-    const token = jwt.sign(
-        { username: data.username },
-        SECRET,
-        { expiresIn: '8h' }
-    );
-
-    res.json({
-        token,
-        username: data.username
-    });
 });
 
 // ================= AUTH =================
@@ -53,11 +65,15 @@ function auth(req, res, next) {
 
     const token = req.headers.authorization;
 
-    if (!token) return res.sendStatus(403);
+    if (!token) {
+        return res.sendStatus(403);
+    }
 
     jwt.verify(token, SECRET, (err, user) => {
 
-        if (err) return res.sendStatus(403);
+        if (err) {
+            return res.sendStatus(403);
+        }
 
         req.user = user;
 
@@ -80,178 +96,297 @@ function obtenerCiudad(usuario) {
 // ================= GET PARTICIPANTES =================
 app.get('/participantes', auth, async (req, res) => {
 
-    let query = supabase
-        .from('participantes')
-        .select('*')
-        .eq('archivado', false);
+    try {
 
-    // admin ve todo
-    if (req.user.username !== 'admin') {
-        query = query.eq('usuario', req.user.username);
+        let query = supabase
+            .from('participantes')
+            .select('*')
+            .eq('archivado', false);
+
+        if (req.user.username !== 'admin') {
+            query = query.eq('usuario', req.user.username);
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+            console.log(error);
+            return res.json([]);
+        }
+
+        res.json(data || []);
+
+    } catch (err) {
+
+        console.log(err);
+
+        res.json([]);
     }
-
-    const { data } = await query;
-
-    res.json(data || []);
 });
 
 // ================= CREAR =================
 app.post('/participantes', auth, async (req, res) => {
 
-    const {
-        nombre,
-        telefono,
-        edad,
-        rol,
-        banco,
-        pago
-    } = req.body;
+    try {
 
-    const ciudad = obtenerCiudad(req.user.username);
-
-    await supabase
-        .from('participantes')
-        .insert([{
+        const {
             nombre,
             telefono,
             edad,
             rol,
             banco,
-            pago: Number(pago) || 0,
-            usuario: req.user.username,
-            ciudad,
-            evento: 'Evento 04 de Mayo',
-            archivado: false
-        }]);
+            pago
+        } = req.body;
 
-    res.json({
-        ok: true
-    });
+        const ciudad = obtenerCiudad(req.user.username);
+
+        const { error } = await supabase
+            .from('participantes')
+            .insert([{
+                nombre,
+                telefono,
+                edad,
+                rol,
+                banco,
+                pago: Number(pago) || 0,
+                usuario: req.user.username,
+                ciudad,
+                evento: 'Evento 04 de Mayo',
+                archivado: false
+            }]);
+
+        if (error) {
+            console.log(error);
+
+            return res.status(500).json({
+                error: 'No se pudo guardar'
+            });
+        }
+
+        res.json({
+            ok: true
+        });
+
+    } catch (err) {
+
+        console.log(err);
+
+        res.status(500).json({
+            error: 'Error servidor'
+        });
+    }
 });
 
 // ================= EDITAR =================
 app.put('/participantes/:id', auth, async (req, res) => {
 
-    const {
-        nombre,
-        telefono,
-        edad,
-        rol,
-        banco,
-        pago
-    } = req.body;
+    try {
 
-    await supabase
-        .from('participantes')
-        .update({
+        const {
             nombre,
             telefono,
             edad,
             rol,
             banco,
-            pago: Number(pago) || 0
-        })
-        .eq('id', req.params.id);
+            pago
+        } = req.body;
 
-    res.json({
-        ok: true
-    });
+        const { error } = await supabase
+            .from('participantes')
+            .update({
+                nombre,
+                telefono,
+                edad,
+                rol,
+                banco,
+                pago: Number(pago) || 0
+            })
+            .eq('id', req.params.id);
+
+        if (error) {
+            console.log(error);
+        }
+
+        res.json({
+            ok: true
+        });
+
+    } catch (err) {
+
+        console.log(err);
+
+        res.status(500).json({
+            error: 'Error servidor'
+        });
+    }
 });
 
 // ================= ELIMINAR =================
 app.delete('/participantes/:id', auth, async (req, res) => {
 
-    await supabase
-        .from('participantes')
-        .delete()
-        .eq('id', req.params.id);
+    try {
 
-    res.json({
-        ok: true
-    });
+        const { error } = await supabase
+            .from('participantes')
+            .delete()
+            .eq('id', req.params.id);
+
+        if (error) {
+            console.log(error);
+        }
+
+        res.json({
+            ok: true
+        });
+
+    } catch (err) {
+
+        console.log(err);
+
+        res.status(500).json({
+            error: 'Error servidor'
+        });
+    }
 });
 
 // ================= ARCHIVAR EVENTO =================
 app.post('/archivar-evento', auth, async (req, res) => {
 
-    if (req.user.username !== 'admin') {
-        return res.sendStatus(403);
+    try {
+
+        if (req.user.username !== 'admin') {
+            return res.sendStatus(403);
+        }
+
+        const { error } = await supabase
+            .from('participantes')
+            .update({
+                archivado: true
+            })
+            .eq('evento', 'Evento 04 de Mayo');
+
+        if (error) {
+            console.log(error);
+        }
+
+        res.json({
+            ok: true
+        });
+
+    } catch (err) {
+
+        console.log(err);
+
+        res.status(500).json({
+            error: 'Error servidor'
+        });
     }
-
-    await supabase
-        .from('participantes')
-        .update({
-            archivado: true
-        })
-        .eq('evento', 'Evento 04 de Mayo');
-
-    res.json({
-        ok: true
-    });
 });
 
 // ================= HISTORIAL =================
 app.get('/historial', auth, async (req, res) => {
 
-    if (req.user.username !== 'admin') {
-        return res.sendStatus(403);
+    try {
+
+        if (req.user.username !== 'admin') {
+            return res.sendStatus(403);
+        }
+
+        const { data, error } = await supabase
+            .from('participantes')
+            .select('*')
+            .eq('archivado', true);
+
+        if (error) {
+            console.log(error);
+            return res.json([]);
+        }
+
+        res.json(data || []);
+
+    } catch (err) {
+
+        console.log(err);
+
+        res.json([]);
     }
-
-    const { data } = await supabase
-        .from('participantes')
-        .select('*')
-        .eq('archivado', true);
-
-    res.json(data || []);
 });
 
 // ================= DASHBOARD =================
 app.get('/dashboard', auth, async (req, res) => {
 
-    let query = supabase
-        .from('participantes')
-        .select('*')
-        .eq('archivado', false);
+    try {
 
-    if (req.user.username !== 'admin') {
-        query = query.eq('usuario', req.user.username);
+        let query = supabase
+            .from('participantes')
+            .select('*')
+            .eq('archivado', false);
+
+        if (req.user.username !== 'admin') {
+            query = query.eq('usuario', req.user.username);
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+
+            console.log(error);
+
+            return res.json({
+                total: 0,
+                ingresos: 0,
+                comisiones: 0,
+                quito: 0,
+                guayaquil: 0
+            });
+        }
+
+        const participantes = data || [];
+
+        let total = participantes.length;
+
+        let ingresos = 0;
+        let comisiones = 0;
+        let quito = 0;
+        let guayaquil = 0;
+
+        participantes.forEach(p => {
+
+            ingresos += Number(p.pago) || 0;
+
+            if ((Number(p.pago) || 0) >= 25) {
+                comisiones += 7;
+            }
+
+            if (p.ciudad === 'Quito') {
+                quito++;
+            }
+
+            if (p.ciudad === 'Guayaquil') {
+                guayaquil++;
+            }
+        });
+
+        res.json({
+            total,
+            ingresos,
+            comisiones,
+            quito,
+            guayaquil
+        });
+
+    } catch (err) {
+
+        console.log(err);
+
+        res.json({
+            total: 0,
+            ingresos: 0,
+            comisiones: 0,
+            quito: 0,
+            guayaquil: 0
+        });
     }
-
-    const { data } = await query;
-
-    let total = data.length;
-
-    let ingresos = 0;
-
-    let comisiones = 0;
-
-    let quito = 0;
-    let guayaquil = 0;
-
-    data.forEach(p => {
-
-        ingresos += Number(p.pago) || 0;
-
-        if ((Number(p.pago) || 0) >= 25) {
-            comisiones += 7;
-        }
-
-        if (p.ciudad === 'Quito') {
-            quito++;
-        }
-
-        if (p.ciudad === 'Guayaquil') {
-            guayaquil++;
-        }
-    });
-
-    res.json({
-        total,
-        ingresos,
-        comisiones,
-        quito,
-        guayaquil
-    });
 });
 
 // ================= SERVER =================
