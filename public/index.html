@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>L'Affaire</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    height:100vh;
+    background:#000;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-family:'Inter',sans-serif;
+    overflow:hidden;
+}
+
+body::before{
+    content:"";
+    position:absolute;
+    width:600px;
+    height:600px;
+    background:radial-gradient(circle,rgba(212,175,55,0.12),transparent 70%);
+    filter:blur(90px);
+    animation:move 8s infinite alternate;
+}
+
+@keyframes move{
+    from{transform:translate(-50px,-50px);}
+    to{transform:translate(50px,50px);}
+}
+
+.container{
+    width:500px;
+    background:#050505;
+    border:1px solid rgba(212,175,55,0.2);
+    border-radius:30px;
+    padding:50px;
+    text-align:center;
+    z-index:2;
+    position:relative;
+    box-shadow:0 0 50px rgba(0,0,0,.9);
+}
+
+.logo{
+    font-size:56px;
+    color:#d4af37;
+    font-family:'Playfair Display',serif;
+    margin-bottom:10px;
+}
+
+.sub{
+    color:#aaa;
+    margin-bottom:50px;
+    font-size:18px;
+}
+
+.btns{
+    display:flex;
+    flex-direction:column;
+    gap:20px;
+}
+
+button{
+    padding:18px;
+    border:none;
+    border-radius:14px;
+    background:linear-gradient(135deg,#d4af37,#b8962e);
+    color:black;
+    font-weight:700;
+    font-size:18px;
+    cursor:pointer;
+    transition:.3s;
+}
+
+button:hover{
+    transform:translateY(-3px);
+    box-shadow:0 10px 30px rgba(212,175,55,.25);
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="logo">
+        L'AFFAIRE
+    </div>
+
+    <div class="sub">
+        Seleccione la ciudad del evento
+    </div>
+
+    <div class="btns">
+
+        <button onclick="entrar('Quito')">
+            QUITO
+        </button>
+
+        <button onclick="entrar('Guayaquil')">
+            GUAYAQUIL
+        </button>
+
+    </div>
+
+</div>
+
+<script>
+
+function entrar(ciudad){
+
+    localStorage.setItem("ciudad", ciudad);
+
+    window.location = "login.html";
+}
+
+</script>
+
+</body>
+</html>

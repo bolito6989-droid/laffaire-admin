@@ -8,12 +8,19 @@ const supabase = require('./supabase');
 const app = express();
 
 app.use(express.json());
+
 app.use(express.static(path.join(__dirname, '..', 'public')));
+
+// ================= HOME =================
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+});
 
 const SECRET = process.env.JWT_SECRET || "laffaire_secret";
 
 // ================= LOGIN =================
 app.post('/login', async (req, res) => {
+
     const { username, password } = req.body;
 
     const { data } = await supabase
@@ -23,59 +30,102 @@ app.post('/login', async (req, res) => {
         .eq('password', password)
         .single();
 
-    if (!data) return res.status(401).json({ error: "Error login" });
+    if (!data) {
+        return res.status(401).json({
+            error: "Credenciales incorrectas"
+        });
+    }
 
-    const token = jwt.sign({ username: data.username }, SECRET);
-    res.json({ token, username: data.username });
+    const token = jwt.sign(
+        { username: data.username },
+        SECRET,
+        { expiresIn: '8h' }
+    );
+
+    res.json({
+        token,
+        username: data.username
+    });
 });
 
 // ================= AUTH =================
 function auth(req, res, next) {
+
     const token = req.headers.authorization;
-    if (!token) return res.sendStatus(403);
+
+    if (!token) {
+        return res.sendStatus(403);
+    }
 
     jwt.verify(token, SECRET, (err, user) => {
-        if (err) return res.sendStatus(403);
+
+        if (err) {
+            return res.sendStatus(403);
+        }
+
         req.user = user;
+
         next();
     });
 }
 
-// ================= GET =================
+// ================= GET PARTICIPANTES =================
 app.get('/participantes', auth, async (req, res) => {
 
-    let query = supabase.from('participantes').select('*');
+    let query = supabase
+        .from('participantes')
+        .select('*');
 
+    // ADMIN VE TODO
     if (req.user.username !== "admin") {
         query = query.eq('usuario', req.user.username);
     }
 
     const { data } = await query;
-    res.json(data);
+
+    res.json(data || []);
 });
 
-// ================= CREATE =================
+// ================= CREAR =================
 app.post('/participantes', auth, async (req, res) => {
 
-    const { nombre, telefono, edad, rol, banco, pago } = req.body;
-
-    await supabase.from('participantes').insert([{
+    const {
         nombre,
         telefono,
         edad,
         rol,
         banco,
-        pago: Number(pago) || 0,
-        usuario: req.user.username
-    }]);
+        pago
+    } = req.body;
 
-    res.json({ ok: true });
+    await supabase
+        .from('participantes')
+        .insert([{
+            nombre,
+            telefono,
+            edad,
+            rol,
+            banco,
+            pago: Number(pago) || 0,
+            usuario: req.user.username
+        }]);
+
+    res.json({
+        ok: true
+    });
 });
 
-// ================= UPDATE (EDITAR) =================
+// ================= EDITAR =================
 app.put('/participantes/:id', auth, async (req, res) => {
 
-    const { nombre, telefono, edad, rol, banco, pago } = req.body;
+    const {
+        nombre,
+        telefono,
+        edad,
+        rol,
+        banco,
+        pago
+    } = req.body;
 
     await supabase
         .from('participantes')
@@ -89,19 +139,30 @@ app.put('/participantes/:id', auth, async (req, res) => {
         })
         .eq('id', req.params.id);
 
-    res.json({ ok: true });
+    res.json({
+        ok: true
+    });
 });
 
-// ================= DELETE =================
+// ================= ELIMINAR =================
 app.delete('/participantes/:id', auth, async (req, res) => {
-    await supabase.from('participantes').delete().eq('id', req.params.id);
-    res.json({ ok: true });
+
+    await supabase
+        .from('participantes')
+        .delete()
+        .eq('id', req.params.id);
+
+    res.json({
+        ok: true
+    });
 });
 
 // ================= DASHBOARD =================
 app.get('/dashboard', auth, async (req, res) => {
 
-    let query = supabase.from('participantes').select('*');
+    let query = supabase
+        .from('participantes')
+        .select('*');
 
     if (req.user.username !== "admin") {
         query = query.eq('usuario', req.user.username);
@@ -114,12 +175,25 @@ app.get('/dashboard', auth, async (req, res) => {
     let comisiones = 0;
 
     data.forEach(p => {
-        ingresos += p.pago || 0;
-        if (p.pago >= 25) comisiones += 7;
+
+        ingresos += Number(p.pago) || 0;
+
+        // comisión
+        if ((Number(p.pago) || 0) >= 25) {
+            comisiones += 7;
+        }
     });
 
-    res.json({ total, ingresos, comisiones });
+    res.json({
+        total,
+        ingresos,
+        comisiones
+    });
 });
 
+// ================= SERVER =================
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("Servidor listo " + PORT));
+
+app.listen(PORT, () => {
+    console.log("Servidor funcionando en puerto " + PORT);
+});
