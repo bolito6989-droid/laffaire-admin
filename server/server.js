@@ -53,15 +53,11 @@ function auth(req, res, next) {
 
     const token = req.headers.authorization;
 
-    if (!token) {
-        return res.sendStatus(403);
-    }
+    if (!token) return res.sendStatus(403);
 
     jwt.verify(token, SECRET, (err, user) => {
 
-        if (err) {
-            return res.sendStatus(403);
-        }
+        if (err) return res.sendStatus(403);
 
         req.user = user;
 
@@ -69,15 +65,28 @@ function auth(req, res, next) {
     });
 }
 
+// ================= CIUDAD STAFF =================
+function obtenerCiudad(usuario) {
+
+    const gye = ['abel', 'daniel', 'emmanuel'];
+
+    if (gye.includes(usuario.toLowerCase())) {
+        return 'Guayaquil';
+    }
+
+    return 'Quito';
+}
+
 // ================= GET PARTICIPANTES =================
 app.get('/participantes', auth, async (req, res) => {
 
     let query = supabase
         .from('participantes')
-        .select('*');
+        .select('*')
+        .eq('archivado', false);
 
-    // ADMIN VE TODO
-    if (req.user.username !== "admin") {
+    // admin ve todo
+    if (req.user.username !== 'admin') {
         query = query.eq('usuario', req.user.username);
     }
 
@@ -98,6 +107,8 @@ app.post('/participantes', auth, async (req, res) => {
         pago
     } = req.body;
 
+    const ciudad = obtenerCiudad(req.user.username);
+
     await supabase
         .from('participantes')
         .insert([{
@@ -107,7 +118,10 @@ app.post('/participantes', auth, async (req, res) => {
             rol,
             banco,
             pago: Number(pago) || 0,
-            usuario: req.user.username
+            usuario: req.user.username,
+            ciudad,
+            evento: 'Evento 04 de Mayo',
+            archivado: false
         }]);
 
     res.json({
@@ -157,37 +171,86 @@ app.delete('/participantes/:id', auth, async (req, res) => {
     });
 });
 
+// ================= ARCHIVAR EVENTO =================
+app.post('/archivar-evento', auth, async (req, res) => {
+
+    if (req.user.username !== 'admin') {
+        return res.sendStatus(403);
+    }
+
+    await supabase
+        .from('participantes')
+        .update({
+            archivado: true
+        })
+        .eq('evento', 'Evento 04 de Mayo');
+
+    res.json({
+        ok: true
+    });
+});
+
+// ================= HISTORIAL =================
+app.get('/historial', auth, async (req, res) => {
+
+    if (req.user.username !== 'admin') {
+        return res.sendStatus(403);
+    }
+
+    const { data } = await supabase
+        .from('participantes')
+        .select('*')
+        .eq('archivado', true);
+
+    res.json(data || []);
+});
+
 // ================= DASHBOARD =================
 app.get('/dashboard', auth, async (req, res) => {
 
     let query = supabase
         .from('participantes')
-        .select('*');
+        .select('*')
+        .eq('archivado', false);
 
-    if (req.user.username !== "admin") {
+    if (req.user.username !== 'admin') {
         query = query.eq('usuario', req.user.username);
     }
 
     const { data } = await query;
 
     let total = data.length;
+
     let ingresos = 0;
+
     let comisiones = 0;
+
+    let quito = 0;
+    let guayaquil = 0;
 
     data.forEach(p => {
 
         ingresos += Number(p.pago) || 0;
 
-        // comisión
         if ((Number(p.pago) || 0) >= 25) {
             comisiones += 7;
+        }
+
+        if (p.ciudad === 'Quito') {
+            quito++;
+        }
+
+        if (p.ciudad === 'Guayaquil') {
+            guayaquil++;
         }
     });
 
     res.json({
         total,
         ingresos,
-        comisiones
+        comisiones,
+        quito,
+        guayaquil
     });
 });
 
@@ -195,5 +258,5 @@ app.get('/dashboard', auth, async (req, res) => {
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-    console.log("Servidor funcionando en puerto " + PORT);
+    console.log("Servidor funcionando puerto " + PORT);
 });
